@@ -1,0 +1,138 @@
+menu "SDM120 MQTT Configuration"
+
+    config SDM120_MQTT_BROKER_URI
+        string "MQTT Broker URI"
+        default "mqtt://192.168.1.10:1883"
+        help
+            MQTT broker URI in the format mqtt://host:port or mqtts://host:port for SSL
+
+    config SDM120_MQTT_USERNAME
+        string "MQTT Username"
+        default ""
+        help
+            MQTT username for authentication. Leave empty for anonymous connection.
+
+    config SDM120_MQTT_PASSWORD
+        string "MQTT Password"
+        default ""
+        help
+            MQTT password for authentication. Leave empty for no password.
+
+    config SDM120_MQTT_CLIENT_ID
+        string "MQTT Client ID"
+        default "sdm120_esp32"
+        help
+            Unique MQTT client identifier. Should be unique across all clients.
+
+    config SDM120_MQTT_TOPIC_PREFIX
+        string "MQTT Topic Prefix"
+        default "energy/sdm120"
+        help
+            Base topic prefix for all MQTT publications (e.g., energy/sdm120/voltage)
+
+    config SDM120_MQTT_HOME_ASSISTANT
+        bool "Enable Home Assistant MQTT Discovery"
+        default y
+        help
+            Enable automatic MQTT discovery for Home Assistant integration
+
+    config SDM120_MQTT_HA_PREFIX
+        string "Home Assistant Discovery Prefix"
+        default "homeassistant"
+        depends on SDM120_MQTT_HOME_ASSISTANT
+        help
+            MQTT discovery prefix used by Home Assistant (usually 'homeassistant')
+
+endmenu
+
+menu "WiFi Configuration"
+
+    config WIFI_SSID
+        string "WiFi SSID"
+        default ""
+        help
+            WiFi network name (SSID) to connect to.
+
+    config WIFI_PASSWORD
+        string "WiFi Password"
+        default ""
+        help
+            WiFi network password. Leave empty for open networks.
+
+    config WIFI_MAXIMUM_RETRY
+        int "Maximum WiFi Connection Retry"
+        default 5
+        range 1 20
+        help
+            Maximum number of retries to attempt WiFi connection before giving up.
+
+    config WIFI_CONNECT_TIMEOUT_MS
+        int "WiFi Connection Timeout (ms)"
+        default 10000
+        range 5000 60000
+        help
+            Timeout in milliseconds to wait for WiFi connection establishment.
+
+    config WIFI_RECONNECT_INTERVAL_MS
+        int "WiFi Reconnect Interval (ms)"
+        default 5000
+        range 1000 30000
+        help
+            Time to wait between WiFi reconnection attempts when connection is lost.
+
+    choice WIFI_POWER_SAVE
+        prompt "WiFi Power Save Mode"
+        default WIFI_POWER_SAVE_NONE
+        help
+            Select WiFi power save mode for optimal performance vs power consumption.
+
+        config WIFI_POWER_SAVE_NONE
+            bool "No Power Save (Best Performance)"
+            help
+                Disable WiFi power save for maximum performance and lowest latency.
+                Recommended for Modbus applications requiring reliable communication.
+
+        config WIFI_POWER_SAVE_MIN
+            bool "Minimum Power Save"
+            help
+                Enable minimum power save mode with balanced performance.
+
+        config WIFI_POWER_SAVE_MAX
+            bool "Maximum Power Save"
+            help
+                Enable maximum power save mode for lowest power consumption.
+                May affect network performance and latency.
+    endchoice
+
+endmenu
+
+menu "SDM120 Device Configuration"
+
+    config SDM120_DEVICE_IP
+        string "SDM120 Device IP Address"
+        default "192.168.1.100"
+        help
+            IP address of your SDM120 energy meter device
+
+    config SDM120_DEVICE_PORT
+        int "SDM120 Device Port"
+        default 502
+        range 1 65535
+        help
+            Modbus TCP port of your SDM120 device (usually 502)
+
+    config SDM120_MODBUS_TIMEOUT
+        int "Modbus Response Timeout (ms)"
+        default 5000
+        range 1000 30000
+        help
+            Timeout in milliseconds to wait for Modbus responses from SDM120
+
+    config SDM120_INTER_PARAM_DELAY
+        int "Inter-Parameter Delay (ms)"
+        default 200
+        range 50 2000
+        help
+            Delay in milliseconds between reading different parameters from SDM120
+
+endmenu
