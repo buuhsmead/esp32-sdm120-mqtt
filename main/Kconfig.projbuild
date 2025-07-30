@@ -20,7 +20,7 @@ menu "SDM120 MQTT Configuration"
 
     config SDM120_MQTT_CLIENT_ID
         string "MQTT Client ID"
-        default "sdm120_esp32"
+        default "sdm120_app"
         help
             Unique MQTT client identifier. Should be unique across all clients.
 
@@ -49,13 +49,13 @@ menu "WiFi Configuration"
 
     config WIFI_SSID
         string "WiFi SSID"
-        default ""
+        default "WifiSSID"
         help
             WiFi network name (SSID) to connect to.
 
     config WIFI_PASSWORD
         string "WiFi Password"
-        default ""
+        default "WifiPass"
         help
             WiFi network password. Leave empty for open networks.
 
@@ -136,3 +136,4 @@ menu "SDM120 Device Configuration"
             Delay in milliseconds between reading different parameters from SDM120
 
 endmenu
+
