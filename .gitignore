@@ -1,6 +1,7 @@
-  build/
-  dependencies.lock
-  managed_components/
-  sdkconfig
-  sdkconfig.old
+build/
+dependencies.lock
+managed_components/
+sdkconfig
+sdkconfig.old
+.idea/
 
