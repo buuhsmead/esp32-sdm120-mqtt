@@ -47,10 +47,15 @@
 
 #include "mbcontroller.h"
 #include "sdkconfig.h"
+#include "driver/gpio.h"
 
 
 
 static const char* TAG = "SDM120_MQTT";
+
+// LED Configuration
+#define LED_GPIO_PIN                    2                               // Built-in LED on most ESP32 dev boards (GPIO2)
+#define LED_BLINK_PERIOD_MS            1000                            // LED blink period (1 second on, 1 second off)
 
 #define MB_TCP_PORT                     (CONFIG_FMB_TCP_PORT_DEFAULT)   // TCP port used by example
 
@@ -796,6 +801,68 @@ static float convert_sdm120_ieee754(uint32_t raw_u32) {
     return converter.f;
 }
 
+/* ===== LED CONTROL FUNCTIONS ===== 
+ * Simple LED blinking functionality for ESP32 development board
+ */
+
+/**
+ * @brief Initialize LED GPIO pin
+ * 
+ * Configures the specified GPIO pin as output for LED control
+ * 
+ * @return ESP_OK on success, error code on failure
+ */
+static esp_err_t led_init(void)
+{
+    ESP_LOGI(TAG, "🔆 Initializing LED on GPIO%d...", LED_GPIO_PIN);
+    
+    // Configure GPIO pin as output
+    gpio_config_t led_config = {
+        .pin_bit_mask = (1ULL << LED_GPIO_PIN),
+        .mode = GPIO_MODE_OUTPUT,
+        .pull_up_en = GPIO_PULLUP_DISABLE,
+        .pull_down_en = GPIO_PULLDOWN_DISABLE,
+        .intr_type = GPIO_INTR_DISABLE
+    };
+    
+    esp_err_t ret = gpio_config(&led_config);
+    if (ret != ESP_OK) {
+        ESP_LOGE(TAG, "❌ Failed to configure LED GPIO%d: %s", LED_GPIO_PIN, esp_err_to_name(ret));
+        return ret;
+    }
+    
+    // Set initial state to OFF (LOW)
+    gpio_set_level(LED_GPIO_PIN, 0);
+    
+    ESP_LOGI(TAG, "✅ LED initialized on GPIO%d", LED_GPIO_PIN);
+    return ESP_OK;
+}
+
+/**
+ * @brief LED blinking task
+ * 
+ * FreeRTOS task that continuously blinks the LED at the specified interval
+ * 
+ * @param pvParameters Unused task parameters
+ */
+static void led_blink_task(void* pvParameters)
+{
+    ESP_LOGI(TAG, "💡 LED blinking task started (period: %dms)", LED_BLINK_PERIOD_MS);
+    
+    bool led_state = false;
+    
+    while (1) {
+        // Toggle LED state
+        led_state = !led_state;
+        gpio_set_level(LED_GPIO_PIN, led_state ? 1 : 0);
+        
+        ESP_LOGD(TAG, "🔆 LED %s", led_state ? "ON" : "OFF");
+        
+        // Wait for half the blink period (for 50% duty cycle)
+        vTaskDelay(pdMS_TO_TICKS(LED_BLINK_PERIOD_MS / 2));
+    }
+}
+
 /**
  * @brief Simple network connectivity check to SDM120 device
  * 
@@ -1200,6 +1267,10 @@ void app_main(void)
     ESP_LOGI(TAG, "Step 1: Initializing system services...");
     ESP_ERROR_CHECK(init_services());
 
+    // Initialize LED GPIO
+    ESP_LOGI(TAG, "Step 1.5: Initializing LED...");
+    ESP_ERROR_CHECK(led_init());
+
     // Initialize the Modbus master for single slave
     ESP_LOGI(TAG, "Step 2: Initializing Modbus master...");
     ESP_ERROR_CHECK(master_init());
@@ -1223,9 +1294,21 @@ void app_main(void)
         NULL                       // Task handle
     );
 
-    if (task_created == pdPASS) {
+    // Create the LED blinking task
+    ESP_LOGI(TAG, "Step 5: Starting LED blinking task...");
+    BaseType_t led_task_created = xTaskCreate(
+        led_blink_task,            // Task function
+        "led_blink",               // Task name
+        2048,                      // Stack size (smaller since it's simple)
+        NULL,                      // Parameters
+        3,                         // Priority (lower than monitoring task)
+        NULL                       // Task handle
+    );
+
+    if (task_created == pdPASS && led_task_created == pdPASS) {
         ESP_LOGI(TAG, "");
         ESP_LOGI(TAG, "🎉 SDM120 application started successfully!");
+        ESP_LOGI(TAG, "💡 LED blinking on GPIO%d (period: %dms)", LED_GPIO_PIN, LED_BLINK_PERIOD_MS);
         ESP_LOGI(TAG, "📊 Reading data from %s every 5 seconds...", SDM120_SLAVE_IP);
         ESP_LOGI(TAG, "📡 Publishing data to MQTT broker: %s", MQTT_BROKER_URI);
         ESP_LOGI(TAG, "📍 MQTT topics: %s/data (JSON) + individual parameters", MQTT_TOPIC_PREFIX);
@@ -1234,7 +1317,12 @@ void app_main(void)
         }
         ESP_LOGI(TAG, "");
     } else {
-        ESP_LOGE(TAG, "❌ Failed to create monitoring task");
+        if (task_created != pdPASS) {
+            ESP_LOGE(TAG, "❌ Failed to create monitoring task");
+        }
+        if (led_task_created != pdPASS) {
+            ESP_LOGE(TAG, "❌ Failed to create LED blinking task");
+        }
     }
 }
 
